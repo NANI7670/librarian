@@ -48,6 +48,7 @@ class StudentLoginView(APIView):
         try:
             student = Student.objects.get(email=email, password=password)
             return Response({
+                "id": student.pk,
                 "student_id": student.student_id,
                 "email": student.email,
                 "first_name": student.first_name,
@@ -112,10 +113,19 @@ class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BookSerializer
 
 
-class StudentDetailAPIView(generics.RetrieveUpdateAPIView):
-    queryset = Student.objects.all()
-    serializer_class = StudentSerializer
-    lookup_field = 'student_id'
+class StudentDetailAPIView(APIView):
+    def get(self, request, student_id):
+        stu = Student.objects.get(id=student_id)
+
+        data = {
+            "student_id": stu.student_id,
+            "first_name": stu.first_name,
+            "last_name": stu.last_name,
+            "email": stu.email,
+            "department": stu.department
+        }
+        return Response({"data": data}, status=200)
+
 
 
 
