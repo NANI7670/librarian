@@ -1,4 +1,6 @@
 from django.db import models
+from datetime import date
+from datetime import date, timedelta
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,PermissionsMixin
 
 
@@ -29,6 +31,7 @@ class Student(models.Model):
     email = models.EmailField(unique=True)
     department = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
+    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
 
     def __str__(self):
         return f"{self.student_id} - {self.first_name} {self.last_name}"
@@ -63,3 +66,23 @@ class Librarian(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+
+
+def default_return_date():
+    return date.today() + timedelta(days=14)
+
+class BookBorrow(models.Model):
+    student = models.ForeignKey('Student', on_delete=models.CASCADE)
+    book = models.ForeignKey('Book', on_delete=models.CASCADE)
+    borrow_date = models.DateField(default=date.today)
+    return_date = models.DateField(default=default_return_date)
+    returned = models.BooleanField(default=False)
+
+    def fine_amount(self):
+        if not self.returned and date.today() > self.return_date:
+            return (date.today() - self.return_date).days * 10
+        return 0
+
+    def __str__(self):
+        return f"{self.student} borrowed {self.book}"

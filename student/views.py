@@ -1,13 +1,15 @@
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from datetime import date, timedelta
+from rest_framework.decorators import api_view
 from django.contrib.auth import authenticate
 
 
 
 
-from student.models import Department,Book,Student,Librarian
-from student.serializers import DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer
+from student.models import Department,Book,Student,Librarian,BookBorrow
+from student.serializers import DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer,StudentSerializer,BookBorrowSerializer
 
 class DepartmentListCreateView(generics.ListCreateAPIView):
     queryset = Department.objects.all()
@@ -29,7 +31,7 @@ class StudentRegisterView(APIView):
     def post(self, request):
         data = request.data.copy()
         last_student = Student.objects.last()
-        student_id = f"CO{(last_student.id + 1) if last_student else 1:03d}"
+        student_id = f"CM{(last_student.id + 1) if last_student else 1:03d}"
         data['student_id'] = student_id
 
         serializer = StudentSerializer(data=data)
@@ -102,3 +104,87 @@ class LibrarianLogoutView(APIView):
                 pass
         request.session.flush()
         return Response({'message': 'Logout successful'})
+    
+
+
+class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+
+
+class StudentDetailAPIView(generics.RetrieveUpdateAPIView):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+    lookup_field = 'student_id'
+
+
+
+@api_view(['GET'])
+def get_student_summary(request, student_id):
+    try:
+        student = Student.objects.get(student_id=student_id)
+        borrows = BookBorrow.objects.filter(student=student)
+
+        borrow_data = BookBorrowSerializer(borrows, many=True).data
+        total_fine = sum([b.fine_amount() for b in borrows if not b.returned])
+
+        return Response({
+            'student': StudentSerializer(student).data,
+            'borrowed_books': borrow_data,
+            'total_fine': total_fine
+        })
+    except Student.DoesNotExist:
+        return Response({'error': 'Student not found'}, status=404)
+
+@api_view(['POST'])
+def borrow_book(request):
+    student_id = request.data.get('student_id')
+    book_id = request.data.get('book_id')
+
+    try:
+        student = Student.objects.get(student_id=student_id)
+        book = Book.objects.get(id=book_id)
+
+        existing = BookBorrow.objects.filter(student=student, returned=False)
+
+        if existing.count() >= 3:
+            return Response({'error': 'Max 3 books allowed'}, status=400)
+
+        if existing.filter(book__title=book.title, book__department=book.department).exists():
+            return Response({'error': 'Cannot borrow duplicate book from same department'}, status=400)
+
+        if book.available_copies <= 0:
+            return Response({'error': 'Stock Over'}, status=400)
+
+        borrow = BookBorrow.objects.create(
+            student=student,
+            book=book,
+            borrow_date=date.today(),
+            return_date=date.today() + timedelta(days=14)
+        )
+
+        book.available_copies -= 1
+        book.save()
+
+        return Response(BookBorrowSerializer(borrow).data)
+
+    except Student.DoesNotExist:
+        return Response({'error': 'Student not found'}, status=404)
+    except Book.DoesNotExist:
+        return Response({'error': 'Book not found'}, status=404)
+
+@api_view(['POST'])
+def return_book(request):
+    borrow_id = request.data.get('borrow_id')
+    try:
+        borrow = BookBorrow.objects.get(id=borrow_id)
+        if borrow.returned:
+            return Response({'error': 'Already returned'}, status=400)
+
+        borrow.returned = True
+        borrow.book.available_copies += 1
+        borrow.book.save()
+        borrow.save()
+        return Response({'message': 'Book returned successfully'})
+    except:
+        return Response({'error': 'Return failed'}, status=400)

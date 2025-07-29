@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from student.models import Department,Book,Student,Librarian
+from student.models import Department,Book,Student,Librarian,BookBorrow
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,3 +39,23 @@ class LibrarianRegisterSerializer(serializers.ModelSerializer):
 class LibrarianLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
+
+class StudentSerializer(serializers.ModelSerializer):
+    department_name = serializers.CharField(source='department.name', read_only=True)
+
+    class Meta:
+        model = Student
+        fields = ['id', 'student_id', 'name', 'email', 'department', 'department_name', 'profile_picture']
+
+
+
+class BookBorrowSerializer(serializers.ModelSerializer):
+    book = BookSerializer()
+    fine = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BookBorrow
+        fields = '__all__'
+
+    def get_fine(self, obj):
+        return obj.fine_amount()
