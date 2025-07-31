@@ -40,12 +40,12 @@ class LibrarianLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
-class StudentSerializer(serializers.ModelSerializer):
-    department_name = serializers.CharField(source='department.name', read_only=True)
 
+class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
-        fields = ['id', 'student_id', 'name', 'email', 'department', 'department_name', 'profile_picture']
+        fields = ['id', 'student_id', 'first_name', 'last_name', 'email', 'department', 'profile_pic']
+
 
 
 

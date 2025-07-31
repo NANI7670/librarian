@@ -5,7 +5,7 @@ from student.views import (
     BookRetrieveUpdateDestroyView,
     BookListCreateView,
     StudentRegisterView,
-    StudentLoginView,get_student_summary,borrow_book,return_book,
+    StudentLoginView,borrow_book,return_book,get_all_books,get_student_details,
   BookList,LibrarianRegisterView, LibrarianLoginView, LibrarianLogoutView,BookDetailView,StudentDetailAPIView
 )
 
@@ -25,11 +25,12 @@ urlpatterns = [
     path('labrarianlogin/', LibrarianLoginView.as_view(), name='librarian-login'),
     path('laibrarianlogout/', LibrarianLogoutView.as_view(), name='librarian-logout'),
     path('api/books/<int:pk>/', BookDetailView.as_view(), name='book-detail'),
-    path('register/<str:student_id>/',StudentDetailAPIView.as_view(), name='student-profile'),
-    path('student/<str:student_id>/summary/', get_student_summary),
+    path('register/<str:student_id>/', StudentDetailAPIView.as_view(), name='student-profile'),
+    path('student/<str:student_id>/', get_student_details, name='student-detail'),
     path('borrow/', borrow_book),
     path('return/', return_book),
-]
+    path('books/', get_all_books),  
 
+]
 
 

@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate
 
 
 from student.models import Department,Book,Student,Librarian,BookBorrow
-from student.serializers import DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer,StudentSerializer,BookBorrowSerializer
+from student.serializers import DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer,BookBorrowSerializer,StudentSerializer
 
 class DepartmentListCreateView(generics.ListCreateAPIView):
     queryset = Department.objects.all()
@@ -115,7 +115,10 @@ class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class StudentDetailAPIView(APIView):
     def get(self, request, student_id):
-        stu = Student.objects.get(id=student_id)
+        try:
+            stu = Student.objects.get(id=student_id)
+        except Student.DoesNotExist:
+            return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
         data = {
             "student_id": stu.student_id,
@@ -126,25 +129,38 @@ class StudentDetailAPIView(APIView):
         }
         return Response({"data": data}, status=200)
 
+    def put(self, request, student_id):
+        try:
+            stu = Student.objects.get(id=student_id)
+        except Student.DoesNotExist:
+            return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = StudentSerializer(stu, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Student profile updated", "data": serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
 
 
-
-@api_view(['GET'])
-def get_student_summary(request, student_id):
+def get_student_details(student_id):
     try:
-        student = Student.objects.get(student_id=student_id)
-        borrows = BookBorrow.objects.filter(student=student)
-
-        borrow_data = BookBorrowSerializer(borrows, many=True).data
-        total_fine = sum([b.fine_amount() for b in borrows if not b.returned])
-
-        return Response({
-            'student': StudentSerializer(student).data,
-            'borrowed_books': borrow_data,
-            'total_fine': total_fine
-        })
+        student = Student.objects.get(student_id=student_id)  # Correct field
+        data = {
+            "student_id": student_id,
+            "first_name": student.first_name,
+            "last_name": student.last_name,
+            "email": student.email,
+            "department": student.department.name if student.department else None,  # If department is FK
+        }
+        return data, None
     except Student.DoesNotExist:
-        return Response({'error': 'Student not found'}, status=404)
+        return None, "Student not found"
+    except Exception as e:
+        return None, str(e)
+
+        
 
 @api_view(['POST'])
 def borrow_book(request):
@@ -155,46 +171,50 @@ def borrow_book(request):
         student = Student.objects.get(student_id=student_id)
         book = Book.objects.get(id=book_id)
 
-        existing = BookBorrow.objects.filter(student=student, returned=False)
+        # 3 book limit
+        active_borrows = BookBorrow.objects.filter(student=student, returned=False)
+        if active_borrows.count() >= 3:
+            return Response({'error': 'Limit of 3 books reached'}, status=400)
 
-        if existing.count() >= 3:
-            return Response({'error': 'Max 3 books allowed'}, status=400)
-
-        if existing.filter(book__title=book.title, book__department=book.department).exists():
-            return Response({'error': 'Cannot borrow duplicate book from same department'}, status=400)
+        # Prevent duplicate title from same department
+        if BookBorrow.objects.filter(student=student, book__title=book.title,
+                                     book__department=book.department, returned=False).exists():
+            return Response({'error': 'Same book from same department already taken'}, status=400)
 
         if book.available_copies <= 0:
-            return Response({'error': 'Stock Over'}, status=400)
+            return Response({'error': 'Stock over'}, status=400)
 
-        borrow = BookBorrow.objects.create(
-            student=student,
-            book=book,
-            borrow_date=date.today(),
-            return_date=date.today() + timedelta(days=14)
-        )
-
+        borrow = BookBorrow.objects.create(student=student, book=book)
         book.available_copies -= 1
         book.save()
 
-        return Response(BookBorrowSerializer(borrow).data)
+        return Response({'message': 'Book borrowed successfully'})
 
-    except Student.DoesNotExist:
-        return Response({'error': 'Student not found'}, status=404)
-    except Book.DoesNotExist:
-        return Response({'error': 'Book not found'}, status=404)
+    except (Student.DoesNotExist, Book.DoesNotExist):
+        return Response({'error': 'Invalid student or book ID'}, status=404)
 
 @api_view(['POST'])
 def return_book(request):
     borrow_id = request.data.get('borrow_id')
+
     try:
         borrow = BookBorrow.objects.get(id=borrow_id)
         if borrow.returned:
-            return Response({'error': 'Already returned'}, status=400)
+            return Response({'error': 'Book already returned'}, status=400)
 
         borrow.returned = True
+        borrow.save()
+
         borrow.book.available_copies += 1
         borrow.book.save()
-        borrow.save()
+
         return Response({'message': 'Book returned successfully'})
-    except:
-        return Response({'error': 'Return failed'}, status=400)
+    except BookBorrow.DoesNotExist:
+        return Response({'error': 'Invalid borrow ID'}, status=404)
+    
+
+@api_view(['GET'])
+def get_all_books(request):
+    books = Book.objects.all()
+    serializer = BookSerializer(books, many=True)
+    return Response(serializer.data)

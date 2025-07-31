@@ -29,7 +29,7 @@ class Student(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    department = models.CharField(max_length=100)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     password = models.CharField(max_length=100)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
 
@@ -69,14 +69,14 @@ class Librarian(AbstractBaseUser, PermissionsMixin):
     
 
 
-def default_return_date():
+def get_return_date():
     return date.today() + timedelta(days=14)
 
 class BookBorrow(models.Model):
     student = models.ForeignKey('Student', on_delete=models.CASCADE)
     book = models.ForeignKey('Book', on_delete=models.CASCADE)
     borrow_date = models.DateField(default=date.today)
-    return_date = models.DateField(default=default_return_date)
+    return_date = models.DateField(default=get_return_date)
     returned = models.BooleanField(default=False)
 
     def fine_amount(self):
@@ -84,5 +84,4 @@ class BookBorrow(models.Model):
             return (date.today() - self.return_date).days * 10
         return 0
 
-    def __str__(self):
-        return f"{self.student} borrowed {self.book}"
+
