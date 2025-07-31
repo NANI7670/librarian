@@ -29,7 +29,7 @@ class Student(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    department = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
 
