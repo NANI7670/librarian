@@ -149,22 +149,23 @@ class StudentDetailAPIView(APIView):
 
     
 
-
-def get_student_details(student_id):
-    try:
-        student = Student.objects.get(student_id=student_id)  # Correct field
-        data = {
-            "student_id": student_id,
-            "first_name": student.first_name,
-            "last_name": student.last_name,
-            "email": student.email,
-            "department": student.department.name if student.department else None,  # If department is FK
-        }
-        return data, None
-    except Student.DoesNotExist:
-        return None, "Student not found"
-    except Exception as e:
-        return None, str(e)
+class get_student_details(APIView):
+    def post(self, request, student_id):
+        import ast
+        try:
+            student = Student.objects.get(student_id=student_id)  # Correct field
+            data = {
+                "student_id": student_id,
+                "first_name": student.first_name,
+                "last_name": student.last_name,
+                "email": student.email,
+                "department": ast.literal_eval(student.department)['name'] if student.department else None,  # If department is FK
+            }
+            return Response(data, status=200)
+        except Student.DoesNotExist:
+            return Response({"data": "Not found"}, status=400)
+        except Exception as e:
+            return Response({"data": str(e)}, status=400)
 
         
 
@@ -309,13 +310,18 @@ def save_book_review(request):
 
 class ComplaintCreateAPIView(APIView):
     def post(self, request):
-        data = request.data.copy()
-        data['sender'] = request.user.id  # Authenticated user
-        serializer = ComplaintSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Complaint sent successfully!"}, status=201)
-        return Response(serializer.errors, status=400)
+        try:
+            data = request.data.copy()
+            data['sent_to'] = 'librarian'
+            print(data, '--------------')
+            serializer = ComplaintSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Complaint sent successfully!"}, status=201)
+            return Response({"errors": serializer.errors}, status=400)
+        except Exception as err:
+            return Response({"errors": serializer.errors}, status=400)
+
 
 class LibrarianComplaintsAPIView(APIView):
     def get(self, request):

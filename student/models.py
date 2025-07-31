@@ -106,7 +106,7 @@ class Complaint(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.sender.username} to {self.sent_to} - {self.message[:20]}"
+        return f"{self.sender.first_name} to {self.sent_to} - {self.message[:20]}"
     
 
 class BookNotificationRequest(models.Model):

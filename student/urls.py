@@ -27,7 +27,7 @@ urlpatterns = [
     path('laibrarianlogout/', LibrarianLogoutView.as_view(), name='librarian-logout'),
     path('api/books/<int:pk>/', BookDetailView.as_view(), name='book-detail'),
     path('register/<str:student_id>/', StudentDetailAPIView.as_view(), name='student-profile'),
-    path('student/<str:student_id>/', get_student_details, name='student-detail'),
+    path('student/<str:student_id>/', get_student_details.as_view(), name='student-detail'),
     path('borrow/', borrow_book),
     path('return/', return_book),
     path('books/', get_all_books),  
