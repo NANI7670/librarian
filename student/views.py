@@ -3,13 +3,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from datetime import date, timedelta
 from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics, permissions
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 
 
 
 
-from student.models import Department,Book,Student,Librarian,BookBorrow
-from student.serializers import DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer,BookBorrowSerializer,StudentSerializer
+from student.models import Department,Book,Student,Librarian,BookBorrow,BookReview,FavoriteBook,Complaint,BookNotificationRequest,BookNotificationLog,StudentPurchase
+from student.serializers import DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer,BookBorrowSerializer,StudentSerializer,ComplaintSerializer,BookNotificationLogSerializer,BookNotificationRequestSerializer,StudentPurchaseSerializer
+
+                                
+              
 
 class DepartmentListCreateView(generics.ListCreateAPIView):
     queryset = Department.objects.all()
@@ -218,3 +224,145 @@ def get_all_books(request):
     books = Book.objects.all()
     serializer = BookSerializer(books, many=True)
     return Response(serializer.data)
+
+
+
+class BookReviewAPIView(APIView):
+    def post(self, request):
+        student_id = request.data.get("student_id")
+        book_id = request.data.get("book_id")
+        review = request.data.get("review")
+
+        student = Student.objects.get(student_id=student_id)
+        book = Book.objects.get(id=book_id)
+
+        BookReview.objects.update_or_create(
+            student=student,
+            book=book,
+            defaults={'review': review}
+        )
+        return Response({"message": "Review submitted."})
+
+    def get(self, request, book_id, student_id):
+        try:
+            review = BookReview.objects.get(book_id=book_id, student__student_id=student_id)
+            return Response({"review": review.review})
+        except BookReview.DoesNotExist:
+            return Response({"review": ""})
+        
+
+class FavoriteBookAPIView(APIView):
+    def post(self, request):
+        student_id = request.data.get("student_id")
+        book_id = request.data.get("book_id")
+
+        student = Student.objects.get(student_id=student_id)
+        book = Book.objects.get(id=book_id)
+
+        FavoriteBook.objects.get_or_create(student=student, book=book)
+        return Response({"message": "Book added to favorites."})
+
+    def delete(self, request):
+        student_id = request.data.get("student_id")
+        book_id = request.data.get("book_id")
+
+        FavoriteBook.objects.filter(student__student_id=student_id, book_id=book_id).delete()
+        return Response({"message": "Book removed from favorites."})
+
+    def get(self, request, student_id):
+        favs = FavoriteBook.objects.filter(student__student_id=student_id).select_related('book')
+        data = [{"id": f.book.id, "title": f.book.title} for f in favs]
+        return Response(data)
+    
+@api_view(['POST'])
+def submit_review(request):
+    borrow_id = request.data.get('borrow_id')
+    review = request.data.get('review')
+
+    borrowed = get_object_or_404(BookBorrow, id=borrow_id)
+    if not borrowed.returned:
+        return Response({'error': 'Book must be returned before submitting review'}, status=400)
+
+    borrowed.review = review
+    borrowed.save()
+
+    return Response({'success': 'Review submitted successfully'})
+
+
+@api_view(['POST'])
+def save_book_review(request):
+    book_id = request.data.get('book_id')
+    student_id = request.data.get('student_id')
+    review = request.data.get('review')
+
+    if not all([book_id, student_id, review]):
+        return Response({'error': 'Missing fields'}, status=400)
+
+    BookBorrow.objects.create(
+        book_id=book_id,
+        student_id=student_id,
+        review=review,
+        returned=True  # optional flag
+    )
+    return Response({'success': 'Review saved'})
+
+
+class ComplaintCreateAPIView(APIView):
+    def post(self, request):
+        data = request.data.copy()
+        data['sender'] = request.user.id  # Authenticated user
+        serializer = ComplaintSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Complaint sent successfully!"}, status=201)
+        return Response(serializer.errors, status=400)
+
+class LibrarianComplaintsAPIView(APIView):
+    def get(self, request):
+        complaints = Complaint.objects.filter(sent_to='librarian')
+        serializer = ComplaintSerializer(complaints, many=True)
+        return Response(serializer.data)
+
+class AdminComplaintsAPIView(APIView):
+    def get(self, request):
+        complaints = Complaint.objects.filter(sent_to='admin')
+        serializer = ComplaintSerializer(complaints, many=True)
+        return Response(serializer.data)
+    
+
+# Student requests notification
+class CreateBookNotificationRequestView(generics.CreateAPIView):
+    queryset = BookNotificationRequest.objects.all()
+    serializer_class = BookNotificationRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(student=self.request.user)
+
+# Student views notifications
+class StudentNotificationListView(generics.ListAPIView):
+    serializer_class = BookNotificationLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return BookNotificationLog.objects.filter(student=self.request.user).order_by('-created_at')
+    
+
+class StudentPurchaseListView(generics.ListAPIView):
+    serializer_class = StudentPurchaseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        student = get_object_or_404(Student, user=self.request.user)
+        return StudentPurchase.objects.filter(student=student)
+
+class PurchaseBookView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, book_id):
+        student = get_object_or_404(Student, user=request.user)
+        book = get_object_or_404(Book, id=book_id)
+        purchase = StudentPurchase.objects.create(student=student, book=book)
+        return Response({"message": "Book purchased successfully."})
+
+

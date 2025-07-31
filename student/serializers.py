@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from student.models import Department,Book,Student,Librarian,BookBorrow
+from student.models import Department,Book,Student,Librarian,BookBorrow,Complaint,BookNotificationRequest,BookNotificationLog,StudentPurchase
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -59,3 +59,38 @@ class BookBorrowSerializer(serializers.ModelSerializer):
 
     def get_fine(self, obj):
         return obj.fine_amount()
+    
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source='sender.username', read_only=True)
+
+    class Meta:
+        model = Complaint
+        fields = '__all__'
+
+
+
+class BookNotificationRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookNotificationRequest
+        fields = ['id', 'book', 'student', 'notified']
+        read_only_fields = ['student', 'notified']
+
+class BookNotificationLogSerializer(serializers.ModelSerializer):
+    book_name = serializers.CharField(source='book.name', read_only=True)
+
+    class Meta:
+        model = BookNotificationLog
+        fields = ['id', 'book_name', 'message', 'created_at']
+
+
+class StudentPurchaseSerializer(serializers.ModelSerializer):
+    book = BookSerializer(read_only=True)
+    fine = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StudentPurchase
+        fields = ['id', 'book', 'purchase_date', 'submitted', 'submit_date', 'fine']
+
+    def get_fine(self, obj):
+        return obj.fine

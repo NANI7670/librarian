@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Department, Book,Student,Librarian
+from .models import Department, Book,Student,Librarian,Complaint
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -44,3 +44,15 @@ class LibrarianAdmin(UserAdmin):
     ordering = ('email',)
 
 admin.site.register(Librarian, LibrarianAdmin)
+
+
+@admin.register(Complaint)
+class ComplaintAdmin(admin.ModelAdmin):
+    list_display = ('id', 'sender', 'sent_to', 'message_summary', 'created_at')
+    list_filter = ('sent_to', 'created_at')
+    search_fields = ('sender__email', 'message')
+
+    def message_summary(self, obj):
+        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
+
+    message_summary.short_description = 'Message'

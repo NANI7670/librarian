@@ -1,7 +1,10 @@
 from django.db import models
 from datetime import date
 from datetime import date, timedelta
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,PermissionsMixin
+from django.utils import timezone
+from django.conf import settings
+
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,PermissionsMixin,User
 
 
 class Department(models.Model):
@@ -84,4 +87,70 @@ class BookBorrow(models.Model):
             return (date.today() - self.return_date).days * 10
         return 0
 
+
+class BookReview(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    review = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class FavoriteBook(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+
+
+class Complaint(models.Model):
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  # ✅ Correct
+    message = models.TextField()
+    sent_to = models.CharField(max_length=20, choices=(("librarian", "Librarian"), ("admin", "Admin")))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender.username} to {self.sent_to} - {self.message[:20]}"
+    
+
+class BookNotificationRequest(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    notified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student} - {self.book} - {'Notified' if self.notified else 'Waiting'}"
+
+
+class BookNotificationLog(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    message = models.CharField(max_length=255)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.student.student_id} - {self.book.title} - {self.message}"
+    
+
+class StudentPurchase(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='purchases')
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    purchase_date = models.DateField(auto_now_add=True)
+    submitted = models.BooleanField(default=False)
+    submit_date = models.DateField(null=True, blank=True)
+
+    def calculate_fine(self):
+        if self.submitted and self.submit_date:
+            days_taken = (self.submit_date - self.purchase_date).days
+        else:
+            days_taken = (date.today() - self.purchase_date).days
+
+        fine_per_day = 10  # ₹10 per day after 3 days
+        if days_taken > 3:
+            return (days_taken - 3) * fine_per_day
+        return 0
+
+    @property
+    def fine(self):
+        return self.calculate_fine()
+
+    def __str__(self):
+        return f"{self.student.user.username} - {self.book.name}"
 

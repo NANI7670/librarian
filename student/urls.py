@@ -5,8 +5,9 @@ from student.views import (
     BookRetrieveUpdateDestroyView,
     BookListCreateView,
     StudentRegisterView,
-    StudentLoginView,borrow_book,return_book,get_all_books,get_student_details,
-  BookList,LibrarianRegisterView, LibrarianLoginView, LibrarianLogoutView,BookDetailView,StudentDetailAPIView
+    StudentLoginView,borrow_book,return_book,get_all_books,get_student_details,submit_review,save_book_review,AdminComplaintsAPIView,ComplaintCreateAPIView,CreateBookNotificationRequestView,
+  BookList,LibrarianRegisterView, LibrarianLoginView, LibrarianLogoutView,BookDetailView,StudentDetailAPIView,BookReviewAPIView,FavoriteBookAPIView,LibrarianComplaintsAPIView,
+  StudentNotificationListView,StudentPurchaseListView,PurchaseBookView
 )
 
 
@@ -30,6 +31,19 @@ urlpatterns = [
     path('borrow/', borrow_book),
     path('return/', return_book),
     path('books/', get_all_books),  
+    path("api/review/", BookReviewAPIView.as_view()),
+    path("api/review/<int:book_id>/<str:student_id>/", BookReviewAPIView.as_view()),
+    path("api/favorite/", FavoriteBookAPIView.as_view()),
+    path("api/favorite/<str:student_id>/", FavoriteBookAPIView.as_view()),
+    path('submit_review/', submit_review),
+    path('api/save_book_review/', save_book_review),
+    path('complaint/send/', ComplaintCreateAPIView.as_view()),
+    path('complaint/librarian/', LibrarianComplaintsAPIView.as_view()),
+    path('complaint/admin/', AdminComplaintsAPIView.as_view()),
+    path('notify-request/', CreateBookNotificationRequestView.as_view(), name='notify-request'),
+    path('notifications/', StudentNotificationListView.as_view(), name='notifications'),
+    path('student/purchases/', StudentPurchaseListView.as_view(), name='student-purchase-list'),
+    path('student/purchase/<int:book_id>/', PurchaseBookView.as_view(), name='purchase-book'),
 
 ]
 
