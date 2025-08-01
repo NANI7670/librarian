@@ -152,6 +152,6 @@ class StudentPurchase(models.Model):
         return self.calculate_fine()
 
     def __str__(self):
-        return f"{self.student.user.username} - {self.book.name}"
+        return f"{self.student.first_name} - {self.book.title}"
 
 

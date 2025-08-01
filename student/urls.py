@@ -43,7 +43,7 @@ urlpatterns = [
     path('complaint/admin/', AdminComplaintsAPIView.as_view()),
     path('notify-request/', CreateBookNotificationRequestView.as_view(), name='notify-request'),
     path('notifications/', StudentNotificationListView.as_view(), name='notifications'),
-    path('student/purchases/', StudentPurchaseListView.as_view(), name='student-purchase-list'),
+    path('student-purchases/<int:id>/', StudentPurchaseListView.as_view(), name='student-purchase-list'),
     path('student/purchase/<int:book_id>/', PurchaseBookView.as_view(), name='purchase-book'),
 
 ]

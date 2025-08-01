@@ -383,13 +383,12 @@ class StudentNotificationListView(generics.ListAPIView):
         return BookNotificationLog.objects.filter(student=self.request.user).order_by('-created_at')
     
 
-class StudentPurchaseListView(generics.ListAPIView):
-    serializer_class = StudentPurchaseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class StudentPurchaseListView(APIView):
+    def get(self, request, id):
+        pur = StudentPurchase.objects.filter(student=id)
+        ser = StudentPurchaseSerializer(pur, many=True)
+        return Response({"data": ser.data}, status=200)
 
-    def get_queryset(self):
-        student = get_object_or_404(Student, user=self.request.user)
-        return StudentPurchase.objects.filter(student=student)
 
 class PurchaseBookView(APIView):
     permission_classes = [permissions.IsAuthenticated]

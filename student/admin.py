@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Department, Book,Student,Librarian,Complaint
+from .models import Department, Book,Student,Librarian,Complaint, StudentPurchase
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -56,3 +56,5 @@ class ComplaintAdmin(admin.ModelAdmin):
         return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
 
     message_summary.short_description = 'Message'
+
+admin.site.register(StudentPurchase)
