@@ -4,7 +4,7 @@ from student.views import (
     DepartmentListCreateView,
     BookRetrieveUpdateDestroyView,
     BookListCreateView,
-    StudentRegisterView,
+    StudentRegisterView,BorrowBookView,
     StudentLoginView,borrow_book,return_book,get_all_books,get_student_details,submit_review,save_book_review,AdminComplaintsAPIView,ComplaintCreateAPIView,CreateBookNotificationRequestView,
   BookList,LibrarianRegisterView, LibrarianLoginView, LibrarianLogoutView,BookDetailView,StudentDetailAPIView,BookReviewAPIView,FavoriteBookAPIView,LibrarianComplaintsAPIView,
   StudentNotificationListView,StudentPurchaseListView,PurchaseBookView
@@ -31,6 +31,7 @@ urlpatterns = [
     path('borrow/', borrow_book),
     path('return/', return_book),
     path('books/', get_all_books),  
+     path('borrow/', BorrowBookView.as_view(), name='borrow-book'),
     path("api/review/", BookReviewAPIView.as_view()),
     path("api/review/<int:book_id>/<str:student_id>/", BookReviewAPIView.as_view()),
     path("api/favorite/", FavoriteBookAPIView.as_view()),

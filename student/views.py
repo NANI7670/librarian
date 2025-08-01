@@ -1,10 +1,11 @@
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions
+
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 
@@ -92,7 +93,7 @@ class LibrarianLoginView(APIView):
             password = serializer.validated_data['password']
             user = authenticate(request, email=email, password=password)
             if user:
-                user.last_login_time = now()
+                user.last_login_time = datetime.now()
                 user.save()
                 request.session['librarian_id'] = user.id
                 return Response({'message': 'Login successful'})
@@ -173,32 +174,60 @@ class get_student_details(APIView):
 def borrow_book(request):
     student_id = request.data.get('student_id')
     book_id = request.data.get('book_id')
+    borrow_date = request.data.get('borrow_date')
+    due_date = request.data.get('due_date')
 
     try:
         student = Student.objects.get(student_id=student_id)
         book = Book.objects.get(id=book_id)
 
-        # 3 book limit
-        active_borrows = BookBorrow.objects.filter(student=student, returned=False)
-        if active_borrows.count() >= 3:
-            return Response({'error': 'Limit of 3 books reached'}, status=400)
-
-        # Prevent duplicate title from same department
-        if BookBorrow.objects.filter(student=student, book__title=book.title,
-                                     book__department=book.department, returned=False).exists():
-            return Response({'error': 'Same book from same department already taken'}, status=400)
-
         if book.available_copies <= 0:
-            return Response({'error': 'Stock over'}, status=400)
+            return Response({'error': 'No copies available'}, status=400)
 
-        borrow = BookBorrow.objects.create(student=student, book=book)
+        # Create the purchase
+        StudentPurchase.objects.create(
+            student=student,
+            book=book,
+            purchase_date=borrow_date
+        )
+
+        # Decrease book stock
         book.available_copies -= 1
         book.save()
 
-        return Response({'message': 'Book borrowed successfully'})
+        return Response({'success': 'Book borrowed successfully'}, status=200)
 
-    except (Student.DoesNotExist, Book.DoesNotExist):
-        return Response({'error': 'Invalid student or book ID'}, status=404)
+    except Student.DoesNotExist:
+        return Response({'error': 'Student not found'}, status=404)
+    except Book.DoesNotExist:
+        return Response({'error': 'Book not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+    
+
+def get(self, request):
+    student = request.user.student  # or however you authenticate student
+    purchases = StudentPurchase.objects.filter(student=student)
+    serializer = StudentPurchaseSerializer(purchases, many=True)
+    return Response(serializer.data)
+
+
+class BorrowBookView(APIView):
+    def post(self, request):
+        student_id = request.data.get('student_id')
+        book_id = request.data.get('book_id')
+
+        try:
+            student = Student.objects.get(id=student_id)
+            book = Book.objects.get(id=book_id)
+
+            purchase = StudentPurchase.objects.create(student=student, book=book)
+            serializer = StudentPurchaseSerializer(purchase)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Student.DoesNotExist:
+            return Response({'error': 'Student not found'}, status=404)
+        except Book.DoesNotExist:
+            return Response({'error': 'Book not found'}, status=404)
 
 @api_view(['POST'])
 def return_book(request):

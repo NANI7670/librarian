@@ -85,12 +85,8 @@ class BookNotificationLogSerializer(serializers.ModelSerializer):
 
 
 class StudentPurchaseSerializer(serializers.ModelSerializer):
-    book = BookSerializer(read_only=True)
-    fine = serializers.SerializerMethodField()
+    fine = serializers.ReadOnlyField()
 
     class Meta:
         model = StudentPurchase
-        fields = ['id', 'book', 'purchase_date', 'submitted', 'submit_date', 'fine']
-
-    def get_fine(self, obj):
-        return obj.fine
+        fields = ['id', 'student', 'book', 'purchase_date', 'submitted', 'submit_date', 'fine']
