@@ -57,4 +57,28 @@ class ComplaintAdmin(admin.ModelAdmin):
 
     message_summary.short_description = 'Message'
 
-admin.site.register(StudentPurchase)
+@admin.register(StudentPurchase)
+class StudentPurchaseAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'student_name',
+        'book_title',
+        'purchase_date',
+        'submitted',
+        'submit_date',
+        'fine_amount',
+    )
+    list_filter = ('submitted', 'purchase_date')
+    search_fields = ('student__first_name', 'student__last_name', 'book__title')
+
+    def student_name(self, obj):
+        return f"{obj.student.first_name} {obj.student.last_name}"
+    student_name.short_description = 'Student Name'
+
+    def book_title(self, obj):
+        return obj.book.title
+    book_title.short_description = 'Book Title'
+
+    def fine_amount(self, obj):
+        return f"₹{obj.fine}"
+    fine_amount.short_description = 'Fine'

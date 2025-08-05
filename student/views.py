@@ -304,6 +304,20 @@ class FavoriteBookAPIView(APIView):
         data = [{"id": f.book.id, "title": f.book.title} for f in favs]
         return Response(data)
     
+
+
+@api_view(['GET'])
+def get_book_reviews(request, book_id):
+    reviews = BookBorrow.objects.filter(book_id=book_id, returned=True).select_related('student')
+    data = [
+        {
+            'student_name': f"{r.student.first_name} {r.student.last_name}",
+            'review': r.review
+        }
+        for r in reviews if r.review
+    ]
+    return Response({'reviews': data})
+    
 @api_view(['POST'])
 def submit_review(request):
     borrow_id = request.data.get('borrow_id')

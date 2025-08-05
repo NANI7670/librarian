@@ -87,6 +87,22 @@ class BookNotificationLogSerializer(serializers.ModelSerializer):
 class StudentPurchaseSerializer(serializers.ModelSerializer):
     fine = serializers.ReadOnlyField()
 
+    # ✅ Additional fields (read-only) for display
+    book_title = serializers.CharField(source='book.title', read_only=True)
+    book_author = serializers.CharField(source='book.author', read_only=True)
+    book_department = serializers.CharField(source='book.department.name', read_only=True)
+
     class Meta:
         model = StudentPurchase
-        fields = ['id', 'student', 'book', 'purchase_date', 'submitted', 'submit_date', 'fine']
+        fields = [
+            'id',
+            'student',
+            'book',
+            'purchase_date',
+            'submitted',
+            'submit_date',
+            'fine',
+            'book_title',         # ✅ newly added
+            'book_author',        # ✅ newly added
+            'book_department'     # ✅ newly added
+        ]
