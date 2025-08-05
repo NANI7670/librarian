@@ -37,8 +37,8 @@ urlpatterns = [
     path("api/favorite/", FavoriteBookAPIView.as_view()),
     path("api/favorite/<str:student_id>/", FavoriteBookAPIView.as_view()),
     path('submit_review/', submit_review),
-    path('api/save_book_review/', save_book_review),
-    path('api/get_book_reviews/<int:book_id>/', get_book_reviews),
+    path('save_book_review/', save_book_review),
+    path('get_book_reviews/<int:book_id>/', get_book_reviews),
 
     path('complaint/send/', ComplaintCreateAPIView.as_view()),
     path('complaint/librarian/', LibrarianComplaintsAPIView.as_view()),

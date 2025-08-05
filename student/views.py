@@ -308,7 +308,7 @@ class FavoriteBookAPIView(APIView):
 
 @api_view(['GET'])
 def get_book_reviews(request, book_id):
-    reviews = BookBorrow.objects.filter(book_id=book_id, returned=True).select_related('student')
+    reviews = BookReview.objects.filter(book_id=book_id)
     data = [
         {
             'student_name': f"{r.student.first_name} {r.student.last_name}",
@@ -342,12 +342,7 @@ def save_book_review(request):
     if not all([book_id, student_id, review]):
         return Response({'error': 'Missing fields'}, status=400)
 
-    BookBorrow.objects.create(
-        book_id=book_id,
-        student_id=student_id,
-        review=review,
-        returned=True  # optional flag
-    )
+    BookReview.objects.create(student_id=student_id, book_id=book_id, review=review)
     return Response({'success': 'Review saved'})
 
 
@@ -355,8 +350,6 @@ class ComplaintCreateAPIView(APIView):
     def post(self, request):
         try:
             data = request.data.copy()
-            data['sent_to'] = 'librarian'
-            print(data, '--------------')
             serializer = ComplaintSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
@@ -380,13 +373,11 @@ class AdminComplaintsAPIView(APIView):
     
 
 # Student requests notification
-class CreateBookNotificationRequestView(generics.CreateAPIView):
-    queryset = BookNotificationRequest.objects.all()
-    serializer_class = BookNotificationRequestSerializer
-    permission_classes = [IsAuthenticated]
+class CreateBookNotificationRequestView(APIView):
+    def post(self, request):
+        BookNotificationRequest.objects.create(student_id=request.data['student'], book_id=request.data['book'])
+        return Response({"data": None}, status=200)
 
-    def perform_create(self, serializer):
-        serializer.save(student=self.request.user)
 
 # Student views notifications
 class StudentNotificationListView(generics.ListAPIView):
@@ -412,5 +403,3 @@ class PurchaseBookView(APIView):
         book = get_object_or_404(Book, id=book_id)
         purchase = StudentPurchase.objects.create(student=student, book=book)
         return Response({"message": "Book purchased successfully."})
-
-

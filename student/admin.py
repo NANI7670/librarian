@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Department, Book,Student,Librarian,Complaint, StudentPurchase
+from .models import Department, Book,Student,Librarian,Complaint, StudentPurchase, BookReview
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -82,3 +82,6 @@ class StudentPurchaseAdmin(admin.ModelAdmin):
     def fine_amount(self, obj):
         return f"₹{obj.fine}"
     fine_amount.short_description = 'Fine'
+
+
+admin.site.register(BookReview)
