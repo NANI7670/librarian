@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Department, Book,Student,Librarian,Complaint, StudentPurchase, BookReview
+from .models import Department, Book,Student,Librarian,Complaint, StudentPurchase, BookReview, BookNotificationRequest, BookNotificationLog
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -85,3 +85,5 @@ class StudentPurchaseAdmin(admin.ModelAdmin):
 
 
 admin.site.register(BookReview)
+admin.site.register(BookNotificationRequest)
+admin.site.register(BookNotificationLog)

@@ -28,10 +28,27 @@ class BookListCreateView(generics.ListCreateAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
 
-class BookRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Book.objects.all()
-    serializer_class = BookSerializer
+# class BookRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Book.objects.all()
+#     serializer_class = BookSerializer
 
+
+class BookRetrieveUpdateDestroyView(APIView):
+    def put(self, request, pk):
+        request.data['total_copies'] = request.data['total_books']
+        request.data['available_copies'] = int(request.data['available_books'])
+        book = Book.objects.get(pk=pk)
+        tot_avai_books = book.available_copies
+        serializer = BookSerializer(book, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            if tot_avai_books == 0 and int(request.data['available_books']) > 0:
+                records = BookNotificationRequest.objects.filter(notified=False, book_id=pk)
+                for re in records:
+                    BookNotificationLog.objects.create(student_id=re.student_id, book_id=re.book_id, message=f'{book.title} book is available')
+                records.update(notified=True)
+            return Response({"data": None}, status=200)
+        return Response({'errors': serializer.errors}, status=400)
 
 
 class StudentRegisterView(APIView):
@@ -183,6 +200,12 @@ def borrow_book(request):
 
         if book.available_copies <= 0:
             return Response({'error': 'No copies available'}, status=400)
+        
+        if StudentPurchase.objects.filter(student=student, book=book, submitted=False).exists():
+            return Response({'error': 'You have already borrowed this copy of book'}, status=400)
+        
+        if StudentPurchase.objects.filter(student=student, submitted=False).count() >= 3:
+            return Response({'error': 'You have already taken 3 books. Please submit one to borrow'}, status=400)
 
         # Create the purchase
         StudentPurchase.objects.create(
@@ -380,12 +403,13 @@ class CreateBookNotificationRequestView(APIView):
 
 
 # Student views notifications
-class StudentNotificationListView(generics.ListAPIView):
+class StudentNotificationListView(APIView):
     serializer_class = BookNotificationLogSerializer
-    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return BookNotificationLog.objects.filter(student=self.request.user).order_by('-created_at')
+    def get(self, request, id):
+        nots = BookNotificationLog.objects.filter(student=id).order_by('-created_at')
+        serializer = self.serializer_class(nots, many=True)
+        return Response({"data": serializer.data}, status=200)
     
 
 class StudentPurchaseListView(APIView):
@@ -403,3 +427,11 @@ class PurchaseBookView(APIView):
         book = get_object_or_404(Book, id=book_id)
         purchase = StudentPurchase.objects.create(student=student, book=book)
         return Response({"message": "Book purchased successfully."})
+
+
+class BooksByDepartmentView(APIView):
+
+    def get(self, request, dep_id):
+        books = Book.objects.filter(department__name=dep_id)
+        serializer = BookSerializer(books, many=True)
+        return Response({'data': serializer.data, "message": "Books list"}, status=200)
