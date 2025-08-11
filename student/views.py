@@ -34,12 +34,11 @@ class BookListCreateView(generics.ListCreateAPIView):
 #     queryset = Book.objects.all()
 #     serializer_class = BookSerializer
 
-
 class BookRetrieveUpdateDestroyView(APIView):
     def put(self, request, pk):
         request.data['total_copies'] = request.data['total_books']
         request.data['available_copies'] = int(request.data['available_books'])
-        book = Book.objects.get(pk=pk)
+        book = get_object_or_404(Book, pk=pk)
         tot_avai_books = book.available_copies
         serializer = BookSerializer(book, data=request.data)
         if serializer.is_valid():
@@ -47,10 +46,19 @@ class BookRetrieveUpdateDestroyView(APIView):
             if tot_avai_books == 0 and int(request.data['available_books']) > 0:
                 records = BookNotificationRequest.objects.filter(notified=False, book_id=pk)
                 for re in records:
-                    BookNotificationLog.objects.create(student_id=re.student_id, book_id=re.book_id, message=f'{book.title} book is available')
+                    BookNotificationLog.objects.create(
+                        student_id=re.student_id,
+                        book_id=re.book_id,
+                        message=f'{book.title} book is available'
+                    )
                 records.update(notified=True)
-            return Response({"data": None}, status=200)
-        return Response({'errors': serializer.errors}, status=400)
+            return Response({"data": None}, status=status.HTTP_200_OK)
+        return Response({'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        book = get_object_or_404(Book, pk=pk)
+        book.delete()
+        return Response({"message": "Book deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class StudentRegisterView(APIView):

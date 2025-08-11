@@ -87,3 +87,5 @@ class StudentPurchaseAdmin(admin.ModelAdmin):
 admin.site.register(BookReview)
 admin.site.register(BookNotificationRequest)
 admin.site.register(BookNotificationLog)
+
+
