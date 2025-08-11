@@ -7,7 +7,7 @@ from student.views import (
     StudentRegisterView,BorrowBookView,
     StudentLoginView,borrow_book,return_book,get_all_books,get_student_details,submit_review,save_book_review,AdminComplaintsAPIView,ComplaintCreateAPIView,CreateBookNotificationRequestView,
   BookList,LibrarianRegisterView, LibrarianLoginView, LibrarianLogoutView,BookDetailView,StudentDetailAPIView,BookReviewAPIView,FavoriteBookAPIView,LibrarianComplaintsAPIView,
-  StudentNotificationListView,StudentPurchaseListView,PurchaseBookView,get_book_reviews, BooksByDepartmentView
+  StudentNotificationListView,StudentPurchaseListView,PurchaseBookView,get_book_reviews, BooksByDepartmentView,PayFineView,ReturnBookView
 )
 
 
@@ -48,7 +48,8 @@ urlpatterns = [
     path('student-purchases/<int:id>/', StudentPurchaseListView.as_view(), name='student-purchase-list'),
     path('student/purchase/<int:book_id>/', PurchaseBookView.as_view(), name='purchase-book'),
     path('books-by-department/<str:dep_id>/', BooksByDepartmentView.as_view(), name='book-department'),
-
+    path('pay-fine/<int:purchase_id>/', PayFineView.as_view(), name='pay-fine'),
+    path('return-book/<int:purchase_id>/', ReturnBookView.as_view(), name='return-book'),
 ]
 
 

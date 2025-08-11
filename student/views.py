@@ -435,3 +435,39 @@ class BooksByDepartmentView(APIView):
         books = Book.objects.filter(department__name=dep_id)
         serializer = BookSerializer(books, many=True)
         return Response({'data': serializer.data, "message": "Books list"}, status=200)
+
+
+# ✅ Clear fine
+class PayFineView(APIView):
+    permission_classes = [permissions.AllowAny]  # adjust as needed
+
+    def post(self, request, purchase_id):
+        purchase = get_object_or_404(StudentPurchase, id=purchase_id)
+        # Here we just simulate paying fine by setting submit_date = purchase_date (no fine)
+        purchase.submit_date = purchase.purchase_date
+        purchase.save()
+        return Response({"message": "Fine cleared successfully"}, status=status.HTTP_200_OK)
+
+
+# ✅ Return book
+class ReturnBookView(APIView):
+    permission_classes = [permissions.AllowAny]  # adjust as needed
+
+    def post(self, request, purchase_id):
+        book_id = request.data.get("book_id")
+        purchase = get_object_or_404(StudentPurchase, id=purchase_id)
+        book = get_object_or_404(Book, id=book_id)
+
+        # Mark as submitted & set date
+        purchase.submitted = True
+        purchase.submit_date = date.today()
+        purchase.save()
+
+        # Increase available copies
+        book.available_copies += 1
+        book.save()
+
+        # Remove from purchases (optional: if you want to delete instead of keeping record)
+        purchase.delete()
+
+        return Response({"message": "Book returned successfully"}, status=status.HTTP_200_OK)
