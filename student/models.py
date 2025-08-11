@@ -137,7 +137,7 @@ class StudentPurchase(models.Model):
     submit_date = models.DateField(null=True, blank=True)
 
     def calculate_fine(self):
-        if self.submitted and self.submit_date:
+        if not self.submitted and self.submit_date:
             days_taken = (self.submit_date - self.purchase_date).days
         else:
             days_taken = (date.today() - self.purchase_date).days

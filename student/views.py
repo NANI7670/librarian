@@ -8,12 +8,14 @@ from rest_framework import generics, permissions
 
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
-
+from django.utils import timezone
 
 
 
 from student.models import Department,Book,Student,Librarian,BookBorrow,BookReview,FavoriteBook,Complaint,BookNotificationRequest,BookNotificationLog,StudentPurchase
-from student.serializers import DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer,BookBorrowSerializer,StudentSerializer,ComplaintSerializer,BookNotificationLogSerializer,BookNotificationRequestSerializer,StudentPurchaseSerializer
+from student.serializers import (DepartmentSerializer,BookSerializer,StudentSerializer,LibrarianLoginSerializer,LibrarianRegisterSerializer,BookBorrowSerializer,
+                                StudentSerializer,ComplaintSerializer,BookNotificationLogSerializer,BookNotificationRequestSerializer,StudentPurchaseSerializer,
+                                StudentSerializerNew)
 
                                 
               
@@ -149,7 +151,8 @@ class StudentDetailAPIView(APIView):
             "first_name": stu.first_name,
             "last_name": stu.last_name,
             "email": stu.email,
-            "department": stu.department
+            "department": stu.department,
+            "profile_pic": stu.profile_picture.url
         }
         return Response({"data": data}, status=200)
 
@@ -159,7 +162,8 @@ class StudentDetailAPIView(APIView):
         except Student.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = StudentSerializer(stu, data=request.data, partial=True)
+        request.data['profile_picture'] = request.data['profile_pic']
+        serializer = StudentSerializerNew(stu, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Student profile updated", "data": serializer.data}, status=status.HTTP_200_OK)
@@ -208,10 +212,12 @@ def borrow_book(request):
             return Response({'error': 'You have already taken 3 books. Please submit one to borrow'}, status=400)
 
         # Create the purchase
+        submit_date = (timezone.now() + timedelta(days=3)).date()
         StudentPurchase.objects.create(
             student=student,
             book=book,
-            purchase_date=borrow_date
+            purchase_date=borrow_date,
+            submit_date=submit_date
         )
 
         # Decrease book stock
@@ -410,11 +416,11 @@ class StudentNotificationListView(APIView):
         nots = BookNotificationLog.objects.filter(student=id).order_by('-created_at')
         serializer = self.serializer_class(nots, many=True)
         return Response({"data": serializer.data}, status=200)
-    
+
 
 class StudentPurchaseListView(APIView):
     def get(self, request, id):
-        pur = StudentPurchase.objects.filter(student=id)
+        pur = StudentPurchase.objects.filter(student=id, submitted=False)
         ser = StudentPurchaseSerializer(pur, many=True)
         return Response({"data": ser.data}, status=200)
 
@@ -439,8 +445,6 @@ class BooksByDepartmentView(APIView):
 
 # ✅ Clear fine
 class PayFineView(APIView):
-    permission_classes = [permissions.AllowAny]  # adjust as needed
-
     def post(self, request, purchase_id):
         purchase = get_object_or_404(StudentPurchase, id=purchase_id)
         # Here we just simulate paying fine by setting submit_date = purchase_date (no fine)
@@ -451,13 +455,12 @@ class PayFineView(APIView):
 
 # ✅ Return book
 class ReturnBookView(APIView):
-    permission_classes = [permissions.AllowAny]  # adjust as needed
 
     def post(self, request, purchase_id):
         book_id = request.data.get("book_id")
+        print(purchase_id, book_id, '11111111111111111111111')
         purchase = get_object_or_404(StudentPurchase, id=purchase_id)
         book = get_object_or_404(Book, id=book_id)
-
         # Mark as submitted & set date
         purchase.submitted = True
         purchase.submit_date = date.today()

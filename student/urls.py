@@ -40,6 +40,7 @@ urlpatterns = [
     path('save_book_review/', save_book_review),
     path('get_book_reviews/<int:book_id>/', get_book_reviews),
 
+    path('return-book/<int:purchase_id>/', ReturnBookView.as_view(), name='return-book'),
     path('complaint/send/', ComplaintCreateAPIView.as_view()),
     path('complaint/librarian/', LibrarianComplaintsAPIView.as_view()),
     path('complaint/admin/', AdminComplaintsAPIView.as_view()),
@@ -49,7 +50,6 @@ urlpatterns = [
     path('student/purchase/<int:book_id>/', PurchaseBookView.as_view(), name='purchase-book'),
     path('books-by-department/<str:dep_id>/', BooksByDepartmentView.as_view(), name='book-department'),
     path('pay-fine/<int:purchase_id>/', PayFineView.as_view(), name='pay-fine'),
-    path('return-book/<int:purchase_id>/', ReturnBookView.as_view(), name='return-book'),
 ]
 
 
